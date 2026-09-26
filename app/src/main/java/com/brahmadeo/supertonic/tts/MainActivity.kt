@@ -87,6 +87,7 @@ class MainActivity : ComponentActivity() {
     )
 
     private var currentModelVersion = "v1" // "v1", "v2", or "v3"
+    private val autoMixedPackVersion = "v2" // "v1", "v2", or "v3"
 
     // Service
     private var playbackService: IPlaybackService? = null
@@ -225,37 +226,31 @@ class MainActivity : ComponentActivity() {
         QueueManager.initialize(this)
 
         // Initial setup based on saved language
-        val savedLang = getSharedPreferences("SupertonicPrefs", MODE_PRIVATE).getString("selected_lang", MainViewModel.DEFAULT_LANG) ?: MainViewModel.DEFAULT_LANG
+        val prefs = getSharedPreferences("SupertonicPrefs", MODE_PRIVATE)
+        val savedLang = prefs.getString("selected_lang", MainViewModel.DEFAULT_LANG) ?: MainViewModel.DEFAULT_LANG
         currentModelVersion = AssetManager.getModelVersionForLanguage(savedLang)
 
-        // On FIRST LAUNCH, we check/download the required version.
-        // If English (default), we ensure V1 is ready.
-        // If they managed to switch language before assets were ready (unlikely), we check that version.
-        if (currentModelVersion == "v1") {
-            if (!AssetManager.isV1Ready(this)) {
-                startDownload("v1")
-            } else {
-                initializeEngine("v1")
+        // First launch: bootstrap multilingual pack (v2) in the background without blocking UI.
+        val hasHandledFirstLaunch = prefs.getBoolean("first_launch_handled", false)
+        if (!hasHandledFirstLaunch) {
+            saveBooleanPref("first_launch_handled", true)
+            if (!AssetManager.isVersionReady(this, autoMixedPackVersion)) {
+                startDownload(autoMixedPackVersion, showUi = false, initializeOnComplete = false)
             }
-        } else if (currentModelVersion == "v2") {
-            if (!AssetManager.isV2Ready(this)) {
-                startDownload("v2")
-            } else {
-                initializeEngine("v2")
-            }
+        }
+
+        if (AssetManager.isVersionReady(this, currentModelVersion)) {
+            initializeEngine(currentModelVersion)
         } else {
-            if (!AssetManager.isV3Ready(this)) {
-                startDownload("v3")
-            } else {
-                initializeEngine("v3")
-            }
+            viewModel.isInitializing.value = false
+            setupVoicesMap(currentModelVersion, viewModel.currentLang.value)
         }
 
         handleIntent(intent)
 
         setContent {
             SupertonicTheme(voiceFile = viewModel.selectedVoiceFile.value) {
-                if (viewModel.isDownloading.value) {
+                if (viewModel.isDownloading.value && viewModel.showDownloadUi.value) {
                     DownloadScreen(
                         status = viewModel.downloadStatus.value,
                         progress = viewModel.downloadProgress.floatValue,
@@ -548,6 +543,14 @@ class MainActivity : ComponentActivity() {
                         },
                         isV2Ready = AssetManager.isV2Ready(this),
                         isV3Ready = AssetManager.isV3Ready(this),
+                        backgroundDownloadInProgress = viewModel.isDownloading.value && !viewModel.showDownloadUi.value,
+                        backgroundDownloadStatus = if (viewModel.isDownloading.value && !viewModel.showDownloadUi.value) {
+                            viewModel.downloadStatus.value
+                        } else {
+                            null
+                        },
+                        backgroundDownloadError = if (!viewModel.showDownloadUi.value) viewModel.downloadError.value else null,
+                        onBackgroundDownloadRetry = { startDownload(viewModel.downloadingVersion.value, showUi = false, initializeOnComplete = false) },
 
                         canResume = viewModel.canResume.value,
                         onResumeClick = {
@@ -622,9 +625,17 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private fun startDownload(version: String) {
-        viewModel.startDownload(this, version) { completedVersion ->
-            initializeEngine(completedVersion)
+    private fun saveBooleanPref(key: String, value: Boolean) {
+        getSharedPreferences("SupertonicPrefs", MODE_PRIVATE).edit(commit = true) {
+            putBoolean(key, value)
+        }
+    }
+
+    private fun startDownload(version: String, showUi: Boolean = true, initializeOnComplete: Boolean = true) {
+        viewModel.startDownload(this, version, showUi) { completedVersion ->
+            if (initializeOnComplete) {
+                initializeEngine(completedVersion)
+            }
         }
     }
 
