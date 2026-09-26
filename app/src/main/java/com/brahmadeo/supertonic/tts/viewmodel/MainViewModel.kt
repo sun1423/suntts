@@ -36,6 +36,7 @@ class MainViewModel : ViewModel() {
 
     // Asset Download State
     var isDownloading = mutableStateOf(false)
+    var showDownloadUi = mutableStateOf(false)
     var downloadingVersion = mutableStateOf("v1")
     var downloadProgress = mutableFloatStateOf(0f)
     var downloadStatus = mutableStateOf("Checking assets...")
@@ -55,10 +56,11 @@ class MainViewModel : ViewModel() {
     // Data
     val voiceFiles = mutableStateMapOf<String, String>()
 
-    fun startDownload(context: Context, version: String, onComplete: (String) -> Unit) {
+    fun startDownload(context: Context, version: String, showUi: Boolean = true, onComplete: (String) -> Unit) {
         if (isDownloading.value) return
 
         isDownloading.value = true
+        showDownloadUi.value = showUi
         downloadingVersion.value = version
         downloadError.value = null
         downloadProgress.floatValue = 0f

@@ -84,6 +84,10 @@ fun MainScreen(
     onOpenEbookClick: () -> Unit,
     isV2Ready: Boolean,
     isV3Ready: Boolean,
+    backgroundDownloadInProgress: Boolean,
+    backgroundDownloadStatus: String?,
+    backgroundDownloadError: String?,
+    onBackgroundDownloadRetry: () -> Unit,
 
     canResume: Boolean,
     onResumeClick: () -> Unit,
@@ -217,6 +221,38 @@ fun MainScreen(
                     .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(24.dp)
             ) {
+                if (backgroundDownloadInProgress || backgroundDownloadError != null) {
+                    Card(
+                        colors = CardDefaults.cardColors(
+                            containerColor = if (backgroundDownloadError != null) {
+                                MaterialTheme.colorScheme.errorContainer
+                            } else {
+                                MaterialTheme.colorScheme.secondaryContainer
+                            }
+                        )
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = backgroundDownloadError
+                                    ?: backgroundDownloadStatus
+                                    ?: stringResource(AppR.string.downloading_models),
+                                modifier = Modifier.weight(1f)
+                            )
+                            if (backgroundDownloadError != null) {
+                                TextButton(onClick = onBackgroundDownloadRetry) {
+                                    Text(stringResource(AppR.string.retry_download))
+                                }
+                            }
+                        }
+                    }
+                }
+
                 // Text Input Section
                 var isFocused by remember { mutableStateOf(false) }
                 var isTextExpanded by remember { mutableStateOf(true) }
@@ -606,6 +642,10 @@ fun MainScreenPreview() {
             onOpenEbookClick = {},
             isV2Ready = true,
             isV3Ready = true,
+            backgroundDownloadInProgress = true,
+            backgroundDownloadStatus = "Downloading multilingual model...",
+            backgroundDownloadError = null,
+            onBackgroundDownloadRetry = {},
             canResume = true,
             onResumeClick = {},
             showMiniPlayer = true,
