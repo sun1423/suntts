@@ -123,6 +123,16 @@ Always write tests for the normalization expansions and chunking rules to preven
 
 ---
 
+## Android TTS Engine Behavior
+
+- The app exposes `SupertonicTextToSpeechService` as an Android TTS engine (discoverable from Android's Text-to-speech output settings).
+- Voice dropdown changes now only update the selected voice preference; switching voice does **not** reload the full model engine.
+- The service initializes the native engine lazily for the requested language/model version and reuses it until a different model family is required.
+- Voice style JSON is resolved per synthesis request (`<lang>-supertonic-<voice>`), with path sanitization and fallback to `F3.json` if needed.
+- Models are not bundled in APK assets by default; they are downloaded via the app when required. This keeps APK size lower at the cost of an initial download for each model family (`v1`, `v2`, `v3`).
+
+---
+
 ## Pronunciation Dictionary (Lexicon) Import/Export Format
 
 To easily share or modify pronunciation rules, you can import and export them as a JSON file.
