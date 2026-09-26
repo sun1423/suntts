@@ -153,11 +153,15 @@
 
         <service android:name=".service.SupertonicTextToSpeechService"
             android:exported="true"
+            android:permission="android.permission.BIND_TEXT_SERVICE"
             android:label="Supertonic TTS">
             <intent-filter android:priority="100">
                 <action android:name="android.intent.action.TTS_SERVICE" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
+            <meta-data
+                android:name="android.speech.tts"
+                android:resource="@xml/tts_engine" />
         </service>
     </application>
 </manifest>

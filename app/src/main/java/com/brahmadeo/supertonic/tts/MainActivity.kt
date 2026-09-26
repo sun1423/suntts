@@ -455,8 +455,6 @@ class MainActivity : ComponentActivity() {
                             if (viewModel.selectedVoiceFile.value != it) {
                                 viewModel.selectedVoiceFile.value = it
                                 saveStringPref("selected_voice", it)
-                                val resetIntent = Intent(this, PlaybackService::class.java).apply { action = "RESET_ENGINE" }
-                                startService(resetIntent)
                             }
                         },
 
